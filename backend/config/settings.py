@@ -89,3 +89,7 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Colombo"
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+import sys
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]  # tests only, never real logins
