@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<section class="home-hero">
+  <div class="home-copy">
+    <h1>Find the right talent.<br>Build your next big thing.</h1>
+    <p class="lead">A platform to hire skilled freelancers and find meaningful work.</p>
+    <form class="home-search" action="/jobs/" method="get">
+      <label class="visually-hidden" for="q">Search jobs, skills or freelancers</label>
+      <div class="search-field">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" name="q" type="search" maxlength="100" placeholder="Search for jobs, skills or freelancers">
+      </div>
+      <button class="btn-navy" type="submit">Search</button>
+    </form>
+  </div>
+  <img class="home-art" src="{% static 'img/hero.png' %}" alt="">
+</section>
+
+<section class="how">
+  <div class="how-head"><h2>How SkillNest works</h2></div>
+  <div class="how-steps">
+    <div class="how-step">
+      <div class="how-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+      <div><h3>1. Search</h3><p>Find the right jobs or talent with ease.</p></div>
+    </div>
+    <div class="how-step">
+      <div class="how-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 1.5 6 5.5"/></svg></div>
+      <div><h3>2. Connect</h3><p>Collaborate with trusted professionals.</p></div>
+    </div>
+    <div class="how-step">
+      <div class="how-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/></svg></div>
+      <div><h3>3. Grow</h3><p>Achieve more together.</p></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Find Jobs - SkillNest{% endblock %}
+{% block content %}
+<main class="page">
+  <h1>Find jobs</h1>
+  <div class="jobs-layout">
+    <aside>
+      <form id="filters" class="filters" action="/jobs/" method="get">
+        <div class="field">
+          <label for="q">Keyword</label>
+          <input id="q" name="q" type="search" maxlength="100" placeholder="e.g. Django, logo">
+        </div>
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" name="category"><option value="">All categories</option></select>
+        </div>
+        <div class="field">
+          <label>Budget</label>
+          <div class="row">
+            <input name="min" type="number" min="0" step="1" placeholder="Min" aria-label="Minimum budget">
+            <input name="max" type="number" min="0" step="1" placeholder="Max" aria-label="Maximum budget">
+          </div>
+        </div>
+        <button class="btn-navy" type="submit">Apply filters</button>
+        <a class="clear" href="/jobs/">Clear</a>
+      </form>
+    </aside>
+    <section>
+      <p id="status" class="status" role="status"></p>
+      <div id="job-list"></div>
+      <nav id="pager" class="pager" aria-label="Pagination"></nav>
+    </section>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/jobs.js' %}"></script>
+{% endblock %}

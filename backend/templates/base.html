@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SkillNest{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+    <link rel="stylesheet" href="{% static 'css/design.css' %}">
+      <link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">SkillNest</a>
+    <a href="/">Home</a>
+    <a href="/jobs/">Find Jobs</a>
+    <a href="/talent/">Find Talent</a>
+    <a href="/about/">About</a>
+    <span class="spacer"></span>
+    <div id="nav-auth" style="display:flex; gap:8px; align-items:center"></div>
+  </nav>
+  {% block content %}{% endblock %}
+  <script type="module" src="{% static 'js/nav.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

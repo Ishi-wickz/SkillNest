@@ -1,0 +1,11 @@
+:root {
+  --navy: #0b1f3a;
+  --beige: #e6e0cc;
+  --blue: #4a6fa5;
+  --blue-dark: #3b5c8a;
+  --white: #ffffff;
+  --grey: #d9d9d9;
+  --text: #0b1f3a;
+  --radius: 6px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

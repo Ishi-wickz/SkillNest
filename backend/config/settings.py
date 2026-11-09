@@ -82,8 +82,7 @@ if not DEBUG:
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Turn this on later, once the backend/static folder exists:
-# STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Colombo"

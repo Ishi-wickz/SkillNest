@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Select account type - SkillNest{% endblock %}
+{% block content %}
+<main class="select">
+  <span class="chip">Get Started</span>
+  <h1>Select Account Type</h1>
+  <p class="sub">Join SkillNest as a client or a freelancer, and be part of a growing community.</p>
+
+  <div class="select-grid">
+    <section class="select-card client">
+      <img src="{% static 'img/client.png' %}" alt="">
+      <h2>I'm a Client</h2>
+      <p class="desc">Post jobs, find skilled freelancers, and get work done.</p>
+      <ul class="ticks">
+        <li>Post projects and get proposals</li>
+        <li>Browse talented professionals</li>
+        <li>Collaborate with ease</li>
+      </ul>
+      <a class="go to-client" href="/signup/details/?role=client">Continue as Client &rarr;</a>
+    </section>
+
+    <section class="select-card freelancer">
+      <img src="{% static 'img/freelancer.png' %}" alt="">
+      <h2>I'm a Freelancer</h2>
+      <p class="desc">Find projects, showcase your skills, and grow your career.</p>
+      <ul class="ticks">
+        <li>Apply for relevant jobs</li>
+        <li>Build your portfolio</li>
+        <li>Send proposals in minutes</li>
+      </ul>
+      <a class="go to-freelancer" href="/signup/details/?role=freelancer">Continue as Freelancer &rarr;</a>
+    </section>
+  </div>
+
+  <p class="auth-alt">Already have an account? <a href="/login/">Log in</a></p>
+</main>
+{% endblock %}
