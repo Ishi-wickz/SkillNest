@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Freelancer - SkillNest{% endblock %}
+{% block content %}
+<main class="page narrow">
+  <p><a href="/talent/">&larr; Back to talent</a></p>
+  <p id="status" class="status" role="status">Loading…</p>
+  <section id="profile" class="panel" hidden></section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/talent_detail.js' %}"></script>
+{% endblock %}

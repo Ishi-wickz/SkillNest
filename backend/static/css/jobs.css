@@ -85,3 +85,10 @@
 .badge.s-open, .badge.s-accepted, .badge.s-completed { background: #d3ead9; color: var(--green-dark); }
 .badge.s-pending, .badge.s-in_progress { background: #f6e8c3; color: #7a5a00; }
 .badge.s-rejected, .badge.s-cancelled, .badge.s-withdrawn { background: #f1d5d5; color: #8a1f1f; }
+
+.talent-main { display: flex; gap: 16px; align-items: flex-start; }
+.avatar-lg { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--navy); color: #fff;
+             display: grid; place-items: center; font-weight: 600; font-size: 18px; }
+.panel .talent-main { align-items: center; margin-bottom: 8px; }
+.panel .talent-main h1 { margin: 0; font-size: 28px; }
+.panel h2 { margin-top: 20px; }
