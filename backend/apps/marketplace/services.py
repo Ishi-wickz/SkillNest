@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
-from .models import Job, Proposal
+from .models import Job, Proposal, Review
 
 
 def _fail(message):
@@ -10,7 +10,6 @@ def _fail(message):
 
 @transaction.atomic
 def submit_proposal(*, job_id, freelancer, bid_amount, delivery_days, cover_letter):
-    # Lock the job row so two simultaneous submissions can't both pass the checks
     job = Job.objects.select_for_update().filter(pk=job_id).first()
     if job is None:
         raise NotFound("Job not found.")
@@ -27,14 +26,13 @@ def submit_proposal(*, job_id, freelancer, bid_amount, delivery_days, cover_lett
 
 
 def _lock_pending_proposal(proposal_id, client):
-    """Lock the job, check ownership, and return (job, proposal). Call inside a transaction."""
     proposal = Proposal.objects.filter(pk=proposal_id).first()
     if proposal is None:
         raise NotFound("Proposal not found.")
     job = Job.objects.select_for_update().get(pk=proposal.job_id)
     if job.client_id != client.id:
-        raise NotFound("Proposal not found.")  # 404, not 403: don't reveal that it exists
-    proposal.refresh_from_db()  # re-read after the lock, in case someone changed it first
+        raise NotFound("Proposal not found.")
+    proposal.refresh_from_db()
     if proposal.status != Proposal.Status.PENDING:
         _fail("Only pending proposals can be changed.")
     return job, proposal
@@ -61,3 +59,32 @@ def reject_proposal(*, proposal_id, client):
     proposal.status = Proposal.Status.REJECTED
     proposal.save(update_fields=["status"])
     return proposal
+
+
+@transaction.atomic
+def complete_job(*, job_id, client):
+    job = Job.objects.select_for_update().filter(pk=job_id).first()
+    if job is None or job.client_id != client.id:
+        raise NotFound("Job not found.")
+    if job.status != Job.Status.IN_PROGRESS:
+        _fail("Only jobs in progress can be marked complete.")
+    job.status = Job.Status.COMPLETED
+    job.save(update_fields=["status", "updated_at"])
+    return job
+
+
+@transaction.atomic
+def submit_review(*, job_id, client, rating, comment):
+    job = Job.objects.select_for_update().filter(pk=job_id).first()
+    if job is None or job.client_id != client.id:
+        raise NotFound("Job not found.")
+    if job.status != Job.Status.COMPLETED:
+        _fail("You can review only after the job is completed.")
+    hired = job.proposals.filter(status=Proposal.Status.ACCEPTED).select_related("freelancer").first()
+    if hired is None:
+        _fail("This job has no hired freelancer.")
+    if Review.objects.filter(job=job, reviewer=client).exists():
+        _fail("You already reviewed this job.")
+    return Review.objects.create(
+        job=job, reviewer=client, reviewee=hired.freelancer, rating=rating, comment=comment
+    )

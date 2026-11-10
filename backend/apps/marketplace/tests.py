@@ -189,3 +189,82 @@ class ProposalTests(Base):
         self.assertEqual(len(self.client.get("/api/proposals/mine/").data["results"]), 1)
         self.login(self.freelancer2)
         self.assertEqual(len(self.client.get("/api/proposals/mine/").data["results"]), 0)
+        
+        
+from .models import Review
+
+
+class ReviewTests(Base):
+    def hire(self):
+        """The freelancer proposes and the client accepts. Leaves the client logged in."""
+        self.login(self.freelancer)
+        body = {"bid_amount": "450.00", "delivery_days": 14, "cover_letter": COVER}
+        pid = self.client.post(f"/api/jobs/{self.job.id}/proposals/", body, format="json").data["id"]
+        self.login(self.owner)
+        self.client.post(f"/api/proposals/{pid}/accept/")
+
+    def test_owner_can_complete_job_in_progress(self):
+        self.hire()
+        resp = self.client.post(f"/api/jobs/{self.job.id}/complete/")
+        self.assertEqual(resp.status_code, 200)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "completed")
+
+    def test_cannot_complete_open_job(self):
+        self.login(self.owner)
+        self.assertEqual(self.client.post(f"/api/jobs/{self.job.id}/complete/").status_code, 400)
+
+    def test_only_owner_can_complete(self):
+        self.hire()
+        self.login(self.other_client)
+        self.assertEqual(self.client.post(f"/api/jobs/{self.job.id}/complete/").status_code, 404)
+        self.login(self.freelancer)
+        self.assertEqual(self.client.post(f"/api/jobs/{self.job.id}/complete/").status_code, 403)
+
+    def test_full_review_flow(self):
+        self.hire()
+        self.client.post(f"/api/jobs/{self.job.id}/complete/")
+        resp = self.client.post(f"/api/jobs/{self.job.id}/reviews/",
+                                {"rating": 5, "comment": "Great work"}, format="json")
+        self.assertEqual(resp.status_code, 201)
+        review = Review.objects.get()
+        self.assertEqual(review.reviewer, self.owner)
+        self.assertEqual(review.reviewee, self.freelancer)  # taken from the accepted proposal
+        self.client.logout()
+        pid = self.freelancer.profile.id
+        reviews = self.client.get(f"/api/talent/{pid}/reviews/")
+        self.assertEqual(reviews.data["count"], 1)
+        self.assertNotIn("owner@example.com", str(reviews.data))
+        talent = self.client.get(f"/api/talent/{pid}/").data
+        self.assertEqual(float(talent["avg_rating"]), 5.0)
+        self.assertEqual(talent["review_count"], 1)
+
+    def test_cannot_review_before_completion(self):
+        self.hire()
+        resp = self.client.post(f"/api/jobs/{self.job.id}/reviews/", {"rating": 4}, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_cannot_review_twice(self):
+        self.hire()
+        self.client.post(f"/api/jobs/{self.job.id}/complete/")
+        url = f"/api/jobs/{self.job.id}/reviews/"
+        self.assertEqual(self.client.post(url, {"rating": 4}, format="json").status_code, 201)
+        self.assertEqual(self.client.post(url, {"rating": 1}, format="json").status_code, 400)
+        self.assertEqual(Review.objects.count(), 1)
+
+    def test_only_job_owner_can_review(self):
+        self.hire()
+        self.client.post(f"/api/jobs/{self.job.id}/complete/")
+        url = f"/api/jobs/{self.job.id}/reviews/"
+        self.login(self.other_client)
+        self.assertEqual(self.client.post(url, {"rating": 5}, format="json").status_code, 404)
+        self.login(self.freelancer)
+        self.assertEqual(self.client.post(url, {"rating": 5}, format="json").status_code, 403)
+
+    def test_rating_must_be_1_to_5(self):
+        self.hire()
+        self.client.post(f"/api/jobs/{self.job.id}/complete/")
+        url = f"/api/jobs/{self.job.id}/reviews/"
+        self.assertEqual(self.client.post(url, {"rating": 0}, format="json").status_code, 400)
+        self.assertEqual(self.client.post(url, {"rating": 6}, format="json").status_code, 400)

@@ -98,3 +98,7 @@ body { margin: 0; font-family: var(--font); background: var(--beige); color: var
 @media (max-width: 720px) { .signup-split { grid-template-columns: 1fr; } .signup-aside { min-height: 200px; } }
 @media (prefers-reduced-motion: reduce) {
   .role-card { transition: none; } .role-card:hover, .role-card:focus-visible { transform: none; } }
+
+
+.nav a, .nav span { white-space: nowrap; }
+.nav { flex-wrap: wrap; gap: 14px 22px; }

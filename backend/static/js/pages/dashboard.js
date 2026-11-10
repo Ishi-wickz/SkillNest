@@ -50,7 +50,7 @@ async function loadProposals(job, panel) {
 async function decide(id, action, ...buttons) {
   if (action === "accept" &&
       !confirm("Accept this proposal? All other pending proposals will be rejected.")) return;
-  buttons.forEach((b) => (b.disabled = true)); // stops double clicks
+  buttons.forEach((b) => (b.disabled = true));
   try {
     await api(`/proposals/${id}/${action}/`, { method: "POST" });
     await clientView();
@@ -58,6 +58,49 @@ async function decide(id, action, ...buttons) {
     alert(err.message || "Something went wrong.");
     buttons.forEach((b) => (b.disabled = false));
   }
+}
+
+function reviewForm(job) {
+  const form = el("form", "review-form");
+  form.noValidate = true;
+
+  const rLabel = el("label", "", "Rating");
+  const select = document.createElement("select");
+  [5, 4, 3, 2, 1].forEach((n) => {
+    const o = el("option", "", `${n} star${n > 1 ? "s" : ""}`);
+    o.value = n;
+    select.append(o);
+  });
+  rLabel.append(select);
+
+  const cLabel = el("label", "", "Comment (optional)");
+  const comment = document.createElement("textarea");
+  comment.maxLength = 2000;
+  cLabel.append(comment);
+
+  const error = el("div", "form-error");
+  error.setAttribute("role", "alert");
+  const submit = el("button", "btn-navy small", "Submit review");
+  submit.type = "submit";
+
+  form.append(rLabel, cLabel, error, submit);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    submit.disabled = true;
+    error.textContent = "";
+    try {
+      await ensureCsrf();
+      await api(`/jobs/${job.id}/reviews/`, {
+        method: "POST",
+        body: { rating: Number(select.value), comment: comment.value.trim() },
+      });
+      await clientView();
+    } catch (err) {
+      error.textContent = err.message || "Could not save your review.";
+      submit.disabled = false;
+    }
+  });
+  return form;
 }
 
 function jobItem(job) {
@@ -74,6 +117,8 @@ function jobItem(job) {
   const actions = el("div", "actions");
   const view = el("button", "btn-navy small", `Proposals (${job.proposal_count})`);
   actions.append(view);
+
+  let reviewPanel = null;
   if (job.status === "open") {
     const cancel = el("button", "btn-outline", "Cancel job");
     cancel.addEventListener("click", async () => {
@@ -83,6 +128,25 @@ function jobItem(job) {
       catch (err) { alert(err.message || "Could not cancel."); cancel.disabled = false; }
     });
     actions.append(cancel);
+  } else if (job.status === "in_progress") {
+    const done = el("button", "btn-green", "Mark complete");
+    done.addEventListener("click", async () => {
+      if (!confirm("Mark this job as complete? You can then review the freelancer.")) return;
+      done.disabled = true;
+      try { await api(`/jobs/${job.id}/complete/`, { method: "POST" }); await clientView(); }
+      catch (err) { alert(err.message || "Could not complete the job."); done.disabled = false; }
+    });
+    actions.append(done);
+  } else if (job.status === "completed") {
+    if (job.reviewed) {
+      actions.append(el("span", "note", "You reviewed this freelancer ✓"));
+    } else {
+      const review = el("button", "btn-green", "Leave a review");
+      reviewPanel = reviewForm(job);
+      reviewPanel.hidden = true;
+      review.addEventListener("click", () => { reviewPanel.hidden = !reviewPanel.hidden; });
+      actions.append(review);
+    }
   }
   left.append(actions);
 
@@ -98,7 +162,9 @@ function jobItem(job) {
     if (!panel.hidden) loadProposals(job, panel);
   });
 
-  item.append(card, panel);
+  item.append(card);
+  if (reviewPanel) item.append(reviewPanel);
+  item.append(panel);
   return item;
 }
 
@@ -134,6 +200,7 @@ async function freelancerView() {
       el("p", "desc", p.cover_letter.length > 200 ? p.cover_letter.slice(0, 200) + "…" : p.cover_letter));
     const side = el("div", "job-side");
     side.append(el("div", "price", Number(p.bid_amount).toFixed(2)), el("small", "", "Your bid"), badge(p.status));
+    if (p.status === "accepted") side.append(el("small", "", `Job ${pretty(p.job_status)}`));
     card.append(left, side);
     return card;
   }));

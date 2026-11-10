@@ -11,4 +11,5 @@ urlpatterns = [
     path("profile/", views.MyProfileView.as_view()),
     path("talent/", talent.TalentListView.as_view()),
     path("talent/<int:pk>/", talent.TalentDetailView.as_view()),
+    path("talent/<int:pk>/reviews/", talent.TalentReviewsView.as_view()),
 ]

@@ -5,7 +5,8 @@ from rest_framework import generics, serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 
-from apps.marketplace.serializers import SkillSerializer
+from apps.marketplace.models import Review
+from apps.marketplace.serializers import ReviewSerializer, SkillSerializer
 
 from .models import Profile, User
 
@@ -17,7 +18,6 @@ class TalentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        # No email and no user id: only what a public profile should show
         fields = ["id", "full_name", "bio", "hourly_rate", "skills", "avg_rating", "review_count"]
         read_only_fields = fields
 
@@ -27,7 +27,6 @@ class TalentSerializer(serializers.ModelSerializer):
 
 
 def talent_queryset():
-    # Only active freelancers appear. Ratings are computed, not stored.
     return (
         Profile.objects.filter(user__role=User.Role.FREELANCER, user__is_active=True)
         .prefetch_related("skills")
@@ -57,7 +56,6 @@ class TalentListView(generics.ListAPIView):
         p = self.request.query_params
         q = p.get("q", "").strip()[:100]
         if q:
-            # Skills are matched with a subquery so the main query has no extra joins
             by_skill = Profile.objects.filter(skills__name__icontains=q).values("id")
             qs = qs.filter(Q(full_name__icontains=q) | Q(bio__icontains=q) | Q(id__in=by_skill))
         if p.get("skill"):
@@ -66,7 +64,7 @@ class TalentListView(generics.ListAPIView):
             qs = qs.filter(hourly_rate__gte=_money(p["min"], "min"))
         if p.get("max"):
             qs = qs.filter(hourly_rate__lte=_money(p["max"], "max"))
-        return qs.order_by("-created_at", "-id")  # explicit order keeps pagination stable
+        return qs.order_by("-created_at", "-id")
 
 
 class TalentDetailView(generics.RetrieveAPIView):
@@ -74,4 +72,18 @@ class TalentDetailView(generics.RetrieveAPIView):
     serializer_class = TalentSerializer
 
     def get_queryset(self):
-        return talent_queryset()  # client profiles give a 404 here
+        return talent_queryset()
+
+
+class TalentReviewsView(generics.ListAPIView):
+    """Public: the reviews a freelancer has received."""
+    permission_classes = [AllowAny]
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        return (
+            Review.objects.filter(reviewee__profile__id=self.kwargs["pk"],
+                                  reviewee__role=User.Role.FREELANCER)
+            .select_related("job", "reviewer__profile")
+            .order_by("-created_at", "-id")
+        )

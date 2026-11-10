@@ -12,14 +12,14 @@ from . import services
 from .models import Category, Job, Proposal, Skill
 from .permissions import IsClient, IsFreelancer, IsJobOwner
 from .serializers import (CategorySerializer, JobSerializer, ProposalCreateSerializer,
-                          ProposalSerializer, SkillSerializer)
+                          ProposalSerializer, ReviewCreateSerializer, ReviewSerializer,
+                          SkillSerializer)
 
 
 def job_queryset():
-    # select_related / prefetch_related / annotate avoid one extra query per job (the N+1 problem)
     return (
         Job.objects.select_related("category", "client__profile")
-        .prefetch_related("skills")
+        .prefetch_related("skills", "reviews")
         .annotate(proposal_count=Count("proposals", distinct=True))
     )
 
@@ -36,7 +36,7 @@ def _money(raw, name):
 
 class CategoryListView(generics.ListAPIView):
     permission_classes = [AllowAny]
-    pagination_class = None  # short lists, no paging needed
+    pagination_class = None
     queryset = Category.objects.order_by("name")
     serializer_class = CategorySerializer
 
@@ -58,9 +58,8 @@ class JobListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         qs = job_queryset().filter(status=Job.Status.OPEN)
         p = self.request.query_params
-        q = p.get("q", "").strip()[:100]  # cap the length
+        q = p.get("q", "").strip()[:100]
         if q:
-            # icontains escapes % and _ itself, so user input can't break the query
             qs = qs.filter(
                 Q(title__icontains=q) | Q(description__icontains=q) | Q(skills__name__icontains=q)
             ).distinct()
@@ -75,7 +74,7 @@ class JobListCreateView(generics.ListCreateAPIView):
         return qs.order_by("-created_at", "-id")
 
     def perform_create(self, serializer):
-        serializer.save(client=self.request.user)  # the client comes from the session, never from the body
+        serializer.save(client=self.request.user)
 
 
 class MyJobsView(generics.ListAPIView):
@@ -83,12 +82,12 @@ class MyJobsView(generics.ListAPIView):
     serializer_class = JobSerializer
 
     def get_queryset(self):
-        return job_queryset().filter(client=self.request.user).order_by("-created_at", "-id")  # every status
+        return job_queryset().filter(client=self.request.user).order_by("-created_at", "-id")
 
 
 class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = JobSerializer
-    http_method_names = ["get", "patch", "delete", "head", "options"]  # no PUT
+    http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
         if self.request.method in SAFE_METHODS:
@@ -99,7 +98,6 @@ class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
         user = self.request.user
         qs = job_queryset()
         if user.is_authenticated:
-            # Visible if open, or yours, or you have a proposal on it
             mine = Exists(Proposal.objects.filter(job=OuterRef("pk"), freelancer=user))
             return qs.annotate(has_proposal=mine).filter(
                 Q(status=Job.Status.OPEN) | Q(client=user) | Q(has_proposal=True)
@@ -112,22 +110,42 @@ class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
 
     def perform_destroy(self, instance):
-        # Soft delete: keep the row, because proposals and reviews point at it
         if instance.status != Job.Status.OPEN:
             raise ValidationError({"detail": "Only open jobs can be cancelled here."})
         instance.status = Job.Status.CANCELLED
         instance.save(update_fields=["status", "updated_at"])
 
 
+class CompleteJobView(APIView):
+    permission_classes = [IsClient]
+
+    def post(self, request, pk):
+        job = services.complete_job(job_id=pk, client=request.user)
+        return Response(JobSerializer(job, context={"request": request}).data)
+
+
+class JobReviewView(APIView):
+    """A client reviews the freelancer they hired, once the job is completed."""
+    permission_classes = [IsClient]
+
+    def post(self, request, job_id):
+        data = ReviewCreateSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        review = services.submit_review(
+            job_id=job_id, client=request.user,
+            rating=data.validated_data["rating"],
+            comment=data.validated_data.get("comment", ""),
+        )
+        return Response(ReviewSerializer(review).data, status=status.HTTP_201_CREATED)
+
+
 class JobProposalsView(generics.ListCreateAPIView):
-    """GET = the job owner sees proposals received. POST = a freelancer submits one."""
     serializer_class = ProposalSerializer
 
     def get_permissions(self):
         return [IsFreelancer()] if self.request.method == "POST" else [IsClient()]
 
     def get_queryset(self):
-        # 404 unless this client owns the job
         job = get_object_or_404(Job, pk=self.kwargs["job_id"], client=self.request.user)
         return job.proposals.select_related("job", "freelancer__profile")
 
