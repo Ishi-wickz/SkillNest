@@ -1,3 +1,7 @@
+from decimal import Decimal
+from apps.marketplace.models import Skill
+from apps.marketplace.serializers import SkillSerializer
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import password_validation
 from django.db import transaction
@@ -57,3 +61,25 @@ class MeSerializer(serializers.ModelSerializer):
     def get_full_name(self, user):
         profile = getattr(user, "profile", None)  # superusers made in the terminal have no profile
         return profile.full_name if profile else None
+    
+class ProfileSerializer(serializers.ModelSerializer):
+    skills = SkillSerializer(many=True, read_only=True)           # read: nested objects
+    skill_ids = serializers.PrimaryKeyRelatedField(               # write: plain ids
+        queryset=Skill.objects.all(), source="skills", many=True, write_only=True, required=False
+    )
+    hourly_rate = serializers.DecimalField(
+        max_digits=8, decimal_places=2, min_value=Decimal("0.01"), required=False, allow_null=True
+    )
+
+    class Meta:
+        model = Profile
+        fields = ["full_name", "bio", "hourly_rate", "skills", "skill_ids"]  # never the user or email
+
+    def validate(self, attrs):
+        # The role comes from the session, never from the request body
+        if self.context["request"].user.role != User.Role.FREELANCER:
+            if attrs.get("hourly_rate") is not None:
+                raise serializers.ValidationError({"hourly_rate": "Only freelancers have an hourly rate."})
+            if attrs.get("skills"):
+                raise serializers.ValidationError({"skill_ids": "Only freelancers can add skills."})
+        return attrs

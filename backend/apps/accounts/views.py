@@ -1,13 +1,15 @@
 from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from .serializers import LoginSerializer, MeSerializer, SignupSerializer
+from .models import Profile
+from .serializers import LoginSerializer, MeSerializer, ProfileSerializer, SignupSerializer
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -24,13 +26,13 @@ class SignupView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"  # limit set in settings.py
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)  # invalid input becomes a 400 with field errors
+        serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        login(request, user)  # log in right after signup
+        login(request, user)
         return Response(MeSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -38,25 +40,24 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "auth"  # slows down password guessing
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = authenticate(
             request,
-            username=serializer.validated_data["email"],  # Django's name for the login field
+            username=serializer.validated_data["email"],
             password=serializer.validated_data["password"],
         )
         if user is None:
-            # Same message for "unknown email" and "wrong password", so attackers can't tell which
             return Response({"detail": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
-        login(request, user)  # creates the session and rotates the session ID
+        login(request, user)
         return Response(MeSerializer(user).data)
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]  # default session auth, so CSRF is enforced here
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         logout(request)
@@ -68,3 +69,13 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(MeSerializer(request.user).data)
+
+
+class MyProfileView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+    http_method_names = ["get", "patch", "head", "options"]  # no PUT
+
+    def get_object(self):
+        # Always the logged-in user's own profile: there is no id in the URL to tamper with
+        return get_object_or_404(Profile.objects.prefetch_related("skills"), user=self.request.user)

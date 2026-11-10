@@ -19,10 +19,12 @@ async function initNav() {
     return;
   }
   if (me.role === "client") box.append(link("/jobs/new/", "Post a job"));
-  if (me.role === "client" || me.role === "freelancer") box.append(link("/dashboard/", "Dashboard"));
+  if (me.role === "client" || me.role === "freelancer") {
+    box.append(link("/dashboard/", "Dashboard"), link("/profile/", "Profile"));
+  }
 
   const who = document.createElement("span");
-  who.textContent = me.full_name || me.email; // textContent: never parsed as HTML
+  who.textContent = me.full_name || me.email;
   const out = document.createElement("button");
   out.className = "btn";
   out.textContent = "Log out";

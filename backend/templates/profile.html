@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}My profile - SkillNest{% endblock %}
+{% block content %}
+<main class="page narrow">
+  <h1>My profile</h1>
+  <p id="gate" class="note">Loading…</p>
+  <section id="profile-box" class="panel" hidden>
+    <div id="form-error" class="form-error" role="alert"></div>
+    <form id="profile-form" novalidate>
+      <div class="field">
+        <label for="full_name">Full name</label>
+        <input id="full_name" name="full_name" type="text" maxlength="120" required>
+      </div>
+      <div class="field">
+        <label for="bio">Bio</label>
+        <textarea id="bio" name="bio" maxlength="2000"></textarea>
+      </div>
+      <div class="field freelancer-only" hidden>
+        <label for="hourly_rate">Hourly rate (USD)</label>
+        <input id="hourly_rate" name="hourly_rate" type="number" min="0.01" step="0.01">
+      </div>
+      <fieldset class="skill-pick freelancer-only" hidden>
+        <legend>Your skills</legend>
+        <div id="skill-list" class="skill-grid"></div>
+      </fieldset>
+      <button class="btn-navy" type="submit">Save profile</button>
+      <p id="saved" class="ok" role="status"></p>
+    </form>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/profile.js' %}"></script>
+{% endblock %}

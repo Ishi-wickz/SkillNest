@@ -14,4 +14,5 @@ urlpatterns = [
     path("jobs/new/", TemplateView.as_view(template_name="post_job.html"), name="post-job"),
     path("jobs/<int:pk>/", TemplateView.as_view(template_name="job_detail.html"), name="job-detail"),
     path("dashboard/", TemplateView.as_view(template_name="dashboard.html"), name="dashboard"),
+    path("profile/", TemplateView.as_view(template_name="profile.html"), name="profile"),
 ]
