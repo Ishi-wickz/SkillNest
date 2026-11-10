@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Post a job - SkillNest{% endblock %}
+{% block content %}
+<main class="page narrow">
+  <h1>Post a job</h1>
+  <p id="gate" class="note"></p>
+  <section id="post-box" class="panel" hidden>
+    <div id="form-error" class="form-error" role="alert"></div>
+    <form id="job-form" novalidate>
+      <div class="field">
+        <label for="title">Job title</label>
+        <input id="title" name="title" type="text" maxlength="150" required
+               placeholder="e.g. Build a portfolio website">
+      </div>
+      <div class="field">
+        <label for="category_id">Category</label>
+        <select id="category_id" name="category_id" required>
+          <option value="">Choose a category</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" maxlength="10000" required></textarea>
+      </div>
+      <div class="field">
+        <label for="budget_type">Budget type</label>
+        <select id="budget_type" name="budget_type">
+          <option value="fixed">Fixed price</option>
+          <option value="hourly">Hourly rate</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="budget_amount">Budget</label>
+        <div class="row">
+          <input id="budget_amount" name="budget_amount" type="number" min="1" step="0.01" required>
+          <select id="currency" name="currency" aria-label="Currency">
+            <option value="USD">USD</option>
+            <option value="LKR">LKR</option>
+          </select>
+        </div>
+      </div>
+      <fieldset class="skill-pick">
+        <legend>Skills needed (optional)</legend>
+        <div id="skill-list" class="skill-grid"></div>
+      </fieldset>
+      <button class="btn-navy" type="submit">Post job</button>
+    </form>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/post_job.js' %}"></script>
+{% endblock %}
