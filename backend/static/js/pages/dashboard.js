@@ -14,6 +14,19 @@ function emptyMessage(text, linkText, href) {
   return p;
 }
 
+// Opens (or finds) the chat for a job, then jumps to the inbox
+async function openChat(body, button) {
+  button.disabled = true;
+  try {
+    await ensureCsrf();
+    const conv = await api("/conversations/", { method: "POST", body });
+    location.href = `/messages/?c=${conv.id}`;
+  } catch (err) {
+    alert(err.message || "Could not open the conversation.");
+    button.disabled = false;
+  }
+}
+
 /* ---------------- Client ---------------- */
 async function loadProposals(job, panel) {
   panel.replaceChildren(el("p", "note", "Loading proposals…"));
@@ -31,15 +44,21 @@ async function loadProposals(job, panel) {
       );
       row.append(head, el("p", "cover", p.cover_letter));
 
+      const actions = el("div", "actions");
+      const buttons = [];
       if (p.status === "pending" && job.status === "open") {
-        const actions = el("div", "actions");
         const accept = el("button", "btn-green", "Accept");
         const reject = el("button", "btn-outline", "Reject");
         accept.addEventListener("click", () => decide(p.id, "accept", accept, reject));
         reject.addEventListener("click", () => decide(p.id, "reject", accept, reject));
         actions.append(accept, reject);
-        row.append(actions);
+        buttons.push(accept, reject);
       }
+      const message = el("button", "btn-outline", "Message");
+      message.addEventListener("click", () =>
+        openChat({ job_id: job.id, freelancer_id: p.freelancer.id }, message));
+      actions.append(message);
+      row.append(actions);
       panel.append(row);
     });
   } catch {
@@ -198,6 +217,12 @@ async function freelancerView() {
     left.append(h2,
       el("div", "meta", `Sent ${timeAgo(p.created_at)} · delivery in ${p.delivery_days} days`),
       el("p", "desc", p.cover_letter.length > 200 ? p.cover_letter.slice(0, 200) + "…" : p.cover_letter));
+    const actions = el("div", "actions");
+    const message = el("button", "btn-outline", "Message client");
+    message.addEventListener("click", () => openChat({ job_id: p.job }, message));
+    actions.append(message);
+    left.append(actions);
+
     const side = el("div", "job-side");
     side.append(el("div", "price", Number(p.bid_amount).toFixed(2)), el("small", "", "Your bid"), badge(p.status));
     if (p.status === "accepted") side.append(el("small", "", `Job ${pretty(p.job_status)}`));

@@ -20,7 +20,22 @@ async function initNav() {
   }
   if (me.role === "client") box.append(link("/jobs/new/", "Post a job"));
   if (me.role === "client" || me.role === "freelancer") {
-    box.append(link("/dashboard/", "Dashboard"), link("/profile/", "Profile"));
+    const messages = link("/messages/", "Messages");
+    const badge = document.createElement("span");
+    badge.className = "nav-badge";
+    badge.hidden = true;
+    messages.append(badge);
+    box.append(link("/dashboard/", "Dashboard"), messages, link("/profile/", "Profile"));
+
+    const refresh = async () => {
+      try {
+        const { count } = await api("/messages/unread/");
+        badge.textContent = String(count);
+        badge.hidden = count === 0;
+      } catch { /* ignore: the badge is a convenience */ }
+    };
+    refresh();
+    setInterval(refresh, 30000);
   }
 
   const who = document.createElement("span");

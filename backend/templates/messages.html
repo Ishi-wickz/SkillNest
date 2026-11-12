@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Messages - SkillNest{% endblock %}
+{% block content %}
+<main class="page">
+  <h1>Messages</h1>
+  <p id="gate" class="note">Loading…</p>
+  <div id="chat-layout" class="chat-layout" hidden>
+    <aside id="conv-list" class="chat-list" aria-label="Conversations"></aside>
+    <section class="chat-pane">
+      <div id="chat-head" class="chat-head"></div>
+      <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
+      <div id="chat-status" class="chat-status" role="status"></div>
+      <form id="chat-form" class="chat-form" hidden>
+        <label class="visually-hidden" for="chat-input">Message</label>
+        <textarea id="chat-input" maxlength="2000" rows="2" placeholder="Write a message… (Enter to send, Shift+Enter for a new line)"></textarea>
+        <button class="btn-navy" type="submit">Send</button>
+      </form>
+    </section>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/messages.js' %}"></script>
+{% endblock %}
