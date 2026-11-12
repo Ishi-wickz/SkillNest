@@ -14,4 +14,5 @@ urlpatterns = [
     path("proposals/mine/", views.MyProposalsView.as_view()),
     path("proposals/<int:pk>/accept/", views.AcceptProposalView.as_view()),
     path("proposals/<int:pk>/reject/", views.RejectProposalView.as_view()),
+    path("proposals/<int:pk>/withdraw/", views.WithdrawProposalView.as_view()),
 ]

@@ -268,3 +268,57 @@ class ReviewTests(Base):
         url = f"/api/jobs/{self.job.id}/reviews/"
         self.assertEqual(self.client.post(url, {"rating": 0}, format="json").status_code, 400)
         self.assertEqual(self.client.post(url, {"rating": 6}, format="json").status_code, 400)
+        
+        
+class WithdrawTests(Base):
+    def make_proposal(self, user):
+        return Proposal.objects.create(job=self.job, freelancer=user, bid_amount=Decimal("450"),
+                                       delivery_days=14, cover_letter=COVER)
+
+    def withdraw(self, user, proposal):
+        self.login(user)
+        return self.client.post(f"/api/proposals/{proposal.id}/withdraw/")
+
+    def test_freelancer_can_withdraw_pending(self):
+        p = self.make_proposal(self.freelancer)
+        self.assertEqual(self.withdraw(self.freelancer, p).status_code, 200)
+        p.refresh_from_db()
+        self.assertEqual(p.status, "withdrawn")
+
+    def test_cannot_withdraw_twice_or_after_accept(self):
+        p = self.make_proposal(self.freelancer)
+        self.assertEqual(self.withdraw(self.freelancer, p).status_code, 200)
+        self.assertEqual(self.withdraw(self.freelancer, p).status_code, 400)
+        p2 = self.make_proposal(self.freelancer2)
+        self.login(self.owner)
+        self.client.post(f"/api/proposals/{p2.id}/accept/")
+        self.assertEqual(self.withdraw(self.freelancer2, p2).status_code, 400)
+        p2.refresh_from_db()
+        self.assertEqual(p2.status, "accepted")
+
+    def test_other_freelancer_gets_404(self):
+        p = self.make_proposal(self.freelancer)
+        self.assertEqual(self.withdraw(self.freelancer2, p).status_code, 404)
+        p.refresh_from_db()
+        self.assertEqual(p.status, "pending")
+
+    def test_client_and_anonymous_blocked(self):
+        p = self.make_proposal(self.freelancer)
+        self.assertEqual(self.withdraw(self.owner, p).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.post(f"/api/proposals/{p.id}/withdraw/").status_code, 403)
+
+    def test_withdrawn_proposal_cannot_be_accepted(self):
+        p = self.make_proposal(self.freelancer)
+        self.withdraw(self.freelancer, p)
+        self.login(self.owner)
+        self.assertEqual(self.client.post(f"/api/proposals/{p.id}/accept/").status_code, 400)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "open")
+
+    def test_cannot_resubmit_after_withdrawing(self):
+        p = self.make_proposal(self.freelancer)
+        self.withdraw(self.freelancer, p)
+        body = {"bid_amount": "400.00", "delivery_days": 10, "cover_letter": COVER}
+        resp = self.client.post(f"/api/jobs/{self.job.id}/proposals/", body, format="json")
+        self.assertEqual(resp.status_code, 400)

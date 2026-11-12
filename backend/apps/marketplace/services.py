@@ -88,3 +88,19 @@ def submit_review(*, job_id, client, rating, comment):
     return Review.objects.create(
         job=job, reviewer=client, reviewee=hired.freelancer, rating=rating, comment=comment
     )
+    
+    
+@transaction.atomic
+def withdraw_proposal(*, proposal_id, freelancer):
+    # Only your own proposals: anyone else's id gives a 404
+    proposal = Proposal.objects.filter(pk=proposal_id, freelancer=freelancer).first()
+    if proposal is None:
+        raise NotFound("Proposal not found.")
+    # Lock the job row like accept does, so withdraw and accept can't both win
+    Job.objects.select_for_update().get(pk=proposal.job_id)
+    proposal.refresh_from_db()
+    if proposal.status != Proposal.Status.PENDING:
+        _fail("Only pending proposals can be withdrawn.")
+    proposal.status = Proposal.Status.WITHDRAWN
+    proposal.save(update_fields=["status"])
+    return proposal

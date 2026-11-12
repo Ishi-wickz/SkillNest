@@ -182,3 +182,11 @@ class RejectProposalView(APIView):
     def post(self, request, pk):
         proposal = services.reject_proposal(proposal_id=pk, client=request.user)
         return Response(ProposalSerializer(proposal).data)
+    
+    
+class WithdrawProposalView(APIView):
+    permission_classes = [IsFreelancer]
+
+    def post(self, request, pk):
+        proposal = services.withdraw_proposal(proposal_id=pk, freelancer=request.user)
+        return Response(ProposalSerializer(proposal).data)
