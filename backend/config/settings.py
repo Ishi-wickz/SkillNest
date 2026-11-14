@@ -82,7 +82,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "60/min", "user": "300/min", "auth": "10/min", "messages": "30/min"},
+    "DEFAULT_THROTTLE_RATES": {"anon": "60/min", "user": "300/min", "auth": "10/min",
+                               "messages": "30/min", "email": "5/hour"},
 }
 if not DEBUG:
     # Production returns JSON only: the browsable HTML API is a development tool
@@ -123,6 +124,30 @@ if REDIS_URL:
                                   "CONFIG": {"hosts": [REDIS_URL]}}}
 else:
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    
+    
+# ---------- Email ----------
+# Locally, emails print in the runserver terminal. For real delivery, set EMAIL_HOST (and the
+# other EMAIL_* variables) in the environment.
+SITE_URL = env("SITE_URL", default="http://127.0.0.1:8000")  # used for links inside emails
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="SkillNest <noreply@skillnest.local>")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 10  # a slow mail server can't hang a request for long
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+PASSWORD_RESET_TIMEOUT = 3600  # reset links work for 1 hour
+
+# Unverified accounts can browse but not post, propose or message. It is switched off while
+# running tests, and the new email tests switch it on with override_settings.
+REQUIRE_VERIFIED_EMAIL = env.bool("REQUIRE_VERIFIED_EMAIL", default=True) and "test" not in sys.argv
+
 
 # ---------- Logging: errors go to the console, which Render shows in its Logs tab ----------
 LOGGING = {

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Verify email - SkillNest{% endblock %}
+{% block content %}
+<main class="page narrow">
+  <h1>Email verification</h1>
+  <section class="panel">
+    <p id="msg" class="detail-desc" role="status">Checking your link…</p>
+    <p id="next" hidden><a class="btn-navy" href="/">Continue to SkillNest</a></p>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/verify_email.js' %}"></script>
+{% endblock %}

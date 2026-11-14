@@ -1,9 +1,12 @@
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
+from apps.accounts.permissions import IsVerified
 
 from . import services
 from .serializers import (ConversationSerializer, MessageCreateSerializer, MessageSerializer,
@@ -18,6 +21,11 @@ class ConversationListCreateView(generics.ListAPIView):
     """GET = my inbox. POST = open (or find) the chat for a job."""
     serializer_class = ConversationSerializer
     pagination_class = InboxPagination
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsVerified()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         return services.inbox(self.request.user)
@@ -34,6 +42,11 @@ class ConversationListCreateView(generics.ListAPIView):
 
 
 class MessagesView(APIView):
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsVerified()]
+        return [IsAuthenticated()]
+
     def get_throttles(self):
         if self.request.method == "POST":
             self.throttle_scope = "messages"  # 30 per minute, set in settings.py
@@ -51,8 +64,7 @@ class MessagesView(APIView):
                 raise ValidationError({"after": "Must be a number."})
             messages = list(qs.filter(id__gt=after_id)[:100])
         else:
-            messages = list(reversed(list(qs.order_by("-id")[:50])))  # latest 50, oldest first
-        # Opening the conversation counts as reading it
+            messages = list(reversed(list(qs.order_by("-id")[:50])))
         services.mark_read(conv, request.user)
         return Response({"results": MessageSerializer(messages, many=True).data})
 
@@ -67,5 +79,7 @@ class MessagesView(APIView):
 
 
 class UnreadCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         return Response({"count": services.unread_count(request.user)})

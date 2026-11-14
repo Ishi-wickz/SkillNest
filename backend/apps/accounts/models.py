@@ -22,6 +22,7 @@ class EmailUserManager(UserManager):
     def create_superuser(self, email, password=None, **extra):
         extra.setdefault("is_staff", True)
         extra.setdefault("is_superuser", True)
+        extra.setdefault("email_verified", True)  # admins created in the terminal are trusted
         extra.setdefault("role", User.Role.ADMIN)
         return self._create_user(email, password, **extra)
 
@@ -35,6 +36,7 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=12, choices=Role.choices)
+    email_verified = models.BooleanField(default=False)  # becomes True when the link is clicked
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

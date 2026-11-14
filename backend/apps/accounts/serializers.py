@@ -56,7 +56,7 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "role", "full_name"]
+        fields = ["id", "email", "role", "full_name", "email_verified"]
 
     def get_full_name(self, user):
         profile = getattr(user, "profile", None)  # superusers made in the terminal have no profile

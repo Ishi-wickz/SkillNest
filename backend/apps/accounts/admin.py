@@ -1,18 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Profile
+
+from .models import Profile, User
 
 
 @admin.register(User)
 class EmailUserAdmin(UserAdmin):
-    # The stock UserAdmin expects a username field, so we override the layout
     ordering = ["email"]
-    list_display = ["email", "role", "is_active", "is_staff", "date_joined"]
-    list_filter = ["role", "is_active", "is_staff"]
+    list_display = ["email", "role", "email_verified", "is_active", "is_staff", "date_joined"]
+    list_filter = ["role", "email_verified", "is_active", "is_staff"]
     search_fields = ["email"]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Role", {"fields": ("role",)}),
+        ("Role", {"fields": ("role", "email_verified")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Dates", {"fields": ("last_login", "date_joined")}),
     )

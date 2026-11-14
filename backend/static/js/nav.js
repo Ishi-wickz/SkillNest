@@ -8,6 +8,32 @@ function link(href, text, cls) {
   return a;
 }
 
+function verifyBanner() {
+  const bar = document.createElement("div");
+  bar.className = "verify-bar";
+  bar.setAttribute("role", "status");
+  const text = document.createElement("span");
+  text.textContent = "Please verify your email to post jobs, send proposals and message people. ";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "link-btn";
+  btn.textContent = "Resend verification email";
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      await ensureCsrf();
+      const r = await api("/auth/verify-email/send/", { method: "POST" });
+      text.textContent = r.detail + " ";
+      btn.remove();
+    } catch (err) {
+      text.textContent = (err.status === 429 ? "Too many requests. Please try again later." : err.message) + " ";
+      btn.disabled = false;
+    }
+  });
+  bar.append(text, btn);
+  return bar;
+}
+
 async function initNav() {
   await ensureCsrf();
   const me = await getMe();
@@ -36,6 +62,8 @@ async function initNav() {
     };
     refresh();
     setInterval(refresh, 30000);
+
+    if (me.email_verified === false) document.querySelector(".nav").after(verifyBanner());
   }
 
   const who = document.createElement("span");

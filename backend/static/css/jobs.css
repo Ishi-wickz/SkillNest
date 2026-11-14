@@ -129,3 +129,10 @@
 .chat-form { display: flex; gap: 10px; padding: 12px; border-top: 1px solid #eee; }
 .chat-form textarea { flex: 1; resize: none; padding: 10px; border: 1px solid #bbb; border-radius: var(--radius); font: inherit; }
 @media (max-width: 760px) { .chat-layout { grid-template-columns: 1fr; } .chat-pane { height: 60vh; } }
+
+
+.verify-bar { background: #f6e8c3; color: #5c4400; padding: 10px 40px; font-size: 14px; text-align: center; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--navy); text-decoration: underline;
+            font: inherit; cursor: pointer; }
+.link-btn:disabled { opacity: .6; cursor: default; }
+.forgot { margin: -6px 0 16px; font-size: 13px; text-align: right; }
