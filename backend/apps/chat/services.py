@@ -10,6 +10,8 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 
 from apps.accounts.models import User
 from apps.marketplace.models import Job, Proposal
+from apps.notifications import services as notifications
+from apps.notifications.models import Notification
 
 from .models import Conversation, Message
 
@@ -20,8 +22,11 @@ def _mine(user):
     return Q(client=user) | Q(freelancer=user)
 
 
+def _chat_url(conversation):
+    return f"/messages/?c={conversation.pk}"
+
+
 def conversation_for_user(user, pk):
-    # 404 (not 403) for other people's chats, so ids can't be probed
     conv = Conversation.objects.filter(pk=pk).filter(_mine(user)).first()
     if conv is None:
         raise NotFound("Conversation not found.")
@@ -48,7 +53,6 @@ def get_or_create_conversation(*, user, job_id, freelancer_id=None):
     else:
         raise PermissionDenied("Only clients and freelancers can send messages.")
 
-    # The rule that stops cold spam: a chat only exists once a proposal exists
     if not Proposal.objects.filter(job=job, freelancer=freelancer).exists():
         raise ValidationError({"detail": "You can message once the freelancer has sent a proposal for this job."})
 
@@ -92,10 +96,11 @@ def unread_count(user):
 
 def mark_read(conversation, user):
     conversation.messages.filter(read_at__isnull=True).exclude(sender=user).update(read_at=timezone.now())
+    # Opening the chat also clears its bell notification
+    notifications.mark_read_for_url(user, _chat_url(conversation))
 
 
 def _ring_doorbell(message):
-    """Tell connected browsers a message arrived. Failure must never break sending."""
     try:
         from .serializers import MessageSerializer
 
@@ -106,7 +111,7 @@ def _ring_doorbell(message):
             f"chat_{message.conversation_id}",
             {"type": "chat.message", "message": dict(MessageSerializer(message).data)},
         )
-    except Exception:  # e.g. Redis is down: the 4-second polling fallback still delivers it
+    except Exception:
         log.exception("Could not broadcast message %s", message.pk)
 
 
@@ -117,6 +122,12 @@ def send_message(*, conversation, sender, body):
         raise ValidationError({"body": "Message cannot be empty."})
     message = Message.objects.create(conversation=conversation, sender=sender, body=body)
     Conversation.objects.filter(pk=conversation.pk).update(updated_at=timezone.now())
-    # Only ring after the database commit, so listeners never fetch a message that isn't saved yet
+
+    recipient = conversation.freelancer if sender.id == conversation.client_id else conversation.client
+    # collapse=True: ten messages in a row give one unread notification and one email
+    notifications.notify(
+        user=recipient, kind=Notification.Kind.NEW_MESSAGE, collapse=True,
+        message=f"New message from {notifications.who(sender)}", url=_chat_url(conversation),
+    )
     transaction.on_commit(lambda: _ring_doorbell(message))
     return message

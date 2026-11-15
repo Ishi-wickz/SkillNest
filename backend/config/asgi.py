@@ -9,10 +9,13 @@ from channels.auth import AuthMiddlewareStack  # noqa: E402
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
 
-from apps.chat.routing import websocket_urlpatterns  # noqa: E402
+from apps.chat.routing import websocket_urlpatterns as chat_ws  # noqa: E402
+from apps.notifications.routing import websocket_urlpatterns as notification_ws  # noqa: E402
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
-    # The origin check is the CSRF protection for WebSockets: other websites can't connect
-    "websocket": AllowedHostsOriginValidator(AuthMiddlewareStack(URLRouter(websocket_urlpatterns))),
+    # The origin check stops other websites from opening sockets as your user
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(URLRouter(chat_ws + notification_ws))
+    ),
 })

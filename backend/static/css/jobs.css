@@ -136,3 +136,20 @@
             font: inherit; cursor: pointer; }
 .link-btn:disabled { opacity: .6; cursor: default; }
 .forgot { margin: -6px 0 16px; font-size: 13px; text-align: right; }
+
+
+.toast { position: fixed; right: 20px; bottom: 20px; z-index: 50; max-width: 340px; background: var(--navy);
+         color: #fff; padding: 14px 18px; border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.3);
+         text-decoration: none; font-size: 14px; line-height: 1.4; }
+.toast:hover { background: var(--blue-dark); }
+.note-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+              flex-wrap: wrap; margin-bottom: 8px; }
+.note-list { background: #fff; border: 1px solid #e4dfcc; border-radius: 14px; overflow: hidden; }
+.note-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px 18px; color: var(--navy);
+             text-decoration: none; border-bottom: 1px solid #eee; line-height: 1.4; }
+.note-item:last-child { border-bottom: 0; }
+.note-item:hover { background: var(--cream); }
+.note-item.unread { background: #f1f6ec; font-weight: 500; }
+.note-dot { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: transparent; }
+.note-item.unread .note-dot { background: var(--green); }
+.note-item small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; }

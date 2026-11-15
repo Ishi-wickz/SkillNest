@@ -1,4 +1,5 @@
 import { api, ensureCsrf, getMe } from "./api.js";
+import { startNotifications } from "./notify.js";
 
 function link(href, text, cls) {
   const a = document.createElement("a");
@@ -47,21 +48,31 @@ async function initNav() {
   if (me.role === "client") box.append(link("/jobs/new/", "Post a job"));
   if (me.role === "client" || me.role === "freelancer") {
     const messages = link("/messages/", "Messages");
-    const badge = document.createElement("span");
-    badge.className = "nav-badge";
-    badge.hidden = true;
-    messages.append(badge);
-    box.append(link("/dashboard/", "Dashboard"), messages, link("/profile/", "Profile"));
+    const msgBadge = document.createElement("span");
+    msgBadge.className = "nav-badge";
+    msgBadge.hidden = true;
+    messages.append(msgBadge);
 
-    const refresh = async () => {
+    const bell = link("/notifications/", "\u{1F514}");
+    bell.title = "Notifications";
+    bell.setAttribute("aria-label", "Notifications");
+    const bellBadge = document.createElement("span");
+    bellBadge.className = "nav-badge";
+    bellBadge.hidden = true;
+    bell.append(bellBadge);
+
+    box.append(link("/dashboard/", "Dashboard"), messages, bell, link("/profile/", "Profile"));
+
+    const refreshMessages = async () => {
       try {
         const { count } = await api("/messages/unread/");
-        badge.textContent = String(count);
-        badge.hidden = count === 0;
+        msgBadge.textContent = String(count);
+        msgBadge.hidden = count === 0;
       } catch { /* ignore: the badge is a convenience */ }
     };
-    refresh();
-    setInterval(refresh, 30000);
+    refreshMessages();
+    setInterval(refreshMessages, 30000);
+    startNotifications(bellBadge);
 
     if (me.email_verified === false) document.querySelector(".nav").after(verifyBanner());
   }

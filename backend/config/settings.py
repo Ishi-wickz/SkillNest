@@ -20,7 +20,7 @@ if RENDER_HOST:
     CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOST}")
 
 INSTALLED_APPS = [
-    "daphne",  # must be first: makes runserver speak ASGI so WebSockets work
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.marketplace",
     "apps.chat",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [

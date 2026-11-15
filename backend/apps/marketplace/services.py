@@ -1,11 +1,20 @@
 from django.db import transaction
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
+from apps.notifications import services as notifications
+from apps.notifications.models import Notification
+
 from .models import Job, Proposal, Review
+
+K = Notification.Kind
 
 
 def _fail(message):
     raise ValidationError({"detail": message})
+
+
+def _title(job):
+    return notifications.short(job.title, 60)
 
 
 @transaction.atomic
@@ -19,10 +28,15 @@ def submit_proposal(*, job_id, freelancer, bid_amount, delivery_days, cover_lett
         _fail("This job is no longer accepting proposals.")
     if Proposal.objects.filter(job=job, freelancer=freelancer).exists():
         _fail("You already submitted a proposal for this job.")
-    return Proposal.objects.create(
+    proposal = Proposal.objects.create(
         job=job, freelancer=freelancer, bid_amount=bid_amount,
         delivery_days=delivery_days, cover_letter=cover_letter,
     )
+    notifications.notify(
+        user=job.client, kind=K.PROPOSAL_RECEIVED, url="/dashboard/",
+        message=f'{notifications.who(freelancer)} sent a proposal for "{_title(job)}"',
+    )
+    return proposal
 
 
 def _lock_pending_proposal(proposal_id, client):
@@ -45,19 +59,37 @@ def accept_proposal(*, proposal_id, client):
         _fail("This job is not open.")
     proposal.status = Proposal.Status.ACCEPTED
     proposal.save(update_fields=["status"])
-    job.proposals.exclude(pk=proposal.pk).filter(status=Proposal.Status.PENDING).update(
-        status=Proposal.Status.REJECTED
+    # Read the others first, so we know exactly who to tell after rejecting them
+    others = list(
+        job.proposals.exclude(pk=proposal.pk)
+        .filter(status=Proposal.Status.PENDING)
+        .select_related("freelancer__profile")
     )
+    job.proposals.filter(pk__in=[o.pk for o in others]).update(status=Proposal.Status.REJECTED)
     job.status = Job.Status.IN_PROGRESS
     job.save(update_fields=["status", "updated_at"])
+
+    notifications.notify(
+        user=proposal.freelancer, kind=K.PROPOSAL_ACCEPTED, url="/dashboard/",
+        message=f'Your proposal for "{_title(job)}" was accepted',
+    )
+    for other in others:
+        notifications.notify(
+            user=other.freelancer, kind=K.PROPOSAL_REJECTED, url="/dashboard/",
+            message=f'"{_title(job)}" went to another freelancer',
+        )
     return proposal
 
 
 @transaction.atomic
 def reject_proposal(*, proposal_id, client):
-    _, proposal = _lock_pending_proposal(proposal_id, client)
+    job, proposal = _lock_pending_proposal(proposal_id, client)
     proposal.status = Proposal.Status.REJECTED
     proposal.save(update_fields=["status"])
+    notifications.notify(
+        user=proposal.freelancer, kind=K.PROPOSAL_REJECTED, url="/dashboard/",
+        message=f'Your proposal for "{_title(job)}" was not selected',
+    )
     return proposal
 
 
@@ -70,6 +102,12 @@ def complete_job(*, job_id, client):
         _fail("Only jobs in progress can be marked complete.")
     job.status = Job.Status.COMPLETED
     job.save(update_fields=["status", "updated_at"])
+    hired = job.proposals.filter(status=Proposal.Status.ACCEPTED).select_related("freelancer").first()
+    if hired:
+        notifications.notify(
+            user=hired.freelancer, kind=K.JOB_COMPLETED, url="/dashboard/",
+            message=f'"{_title(job)}" was marked complete',
+        )
     return job
 
 
@@ -85,22 +123,31 @@ def submit_review(*, job_id, client, rating, comment):
         _fail("This job has no hired freelancer.")
     if Review.objects.filter(job=job, reviewer=client).exists():
         _fail("You already reviewed this job.")
-    return Review.objects.create(
+    review = Review.objects.create(
         job=job, reviewer=client, reviewee=hired.freelancer, rating=rating, comment=comment
     )
-    
-    
+    profile = getattr(hired.freelancer, "profile", None)
+    notifications.notify(
+        user=hired.freelancer, kind=K.REVIEW_RECEIVED,
+        url=f"/talent/{profile.id}/" if profile else "/dashboard/",
+        message=f"{notifications.who(client)} left you a {rating}-star review",
+    )
+    return review
+
+
 @transaction.atomic
 def withdraw_proposal(*, proposal_id, freelancer):
-    # Only your own proposals: anyone else's id gives a 404
     proposal = Proposal.objects.filter(pk=proposal_id, freelancer=freelancer).first()
     if proposal is None:
         raise NotFound("Proposal not found.")
-    # Lock the job row like accept does, so withdraw and accept can't both win
-    Job.objects.select_for_update().get(pk=proposal.job_id)
+    job = Job.objects.select_for_update().get(pk=proposal.job_id)  # same lock as accept
     proposal.refresh_from_db()
     if proposal.status != Proposal.Status.PENDING:
         _fail("Only pending proposals can be withdrawn.")
     proposal.status = Proposal.Status.WITHDRAWN
     proposal.save(update_fields=["status"])
+    notifications.notify(
+        user=job.client, kind=K.PROPOSAL_WITHDRAWN, url="/dashboard/",
+        message=f'{notifications.who(freelancer)} withdrew their proposal for "{_title(job)}"',
+    )
     return proposal

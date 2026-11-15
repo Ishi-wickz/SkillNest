@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Notifications - SkillNest{% endblock %}
+{% block content %}
+<main class="page narrow">
+  <h1>Notifications</h1>
+  <p id="gate" class="note">Loading…</p>
+  <section id="box" hidden>
+    <div class="note-tools">
+      <label class="skill-opt"><input type="checkbox" id="email-toggle"> Email me about new activity</label>
+      <button id="read-all" class="btn-outline" type="button">Mark all as read</button>
+    </div>
+    <p id="saved" class="note" role="status"></p>
+    <p class="note">Emails are sent only to a verified email address, and at most 10 per hour.</p>
+    <p id="status" class="status" role="status"></p>
+    <div id="note-list" class="note-list" hidden></div>
+    <nav id="pager" class="pager" aria-label="Pagination"></nav>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/pages/notifications.js' %}"></script>
+{% endblock %}
