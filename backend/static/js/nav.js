@@ -47,7 +47,9 @@ async function initNav() {
   }
   if (me.role === "client") box.append(link("/jobs/new/", "Post a job"));
   if (me.role === "client" || me.role === "freelancer") {
-    const messages = link("/messages/", "Messages");
+    const messages = link("/messages/", "\u2709\uFE0F");
+    messages.title = "Messages";
+    messages.setAttribute("aria-label", "Messages");
     const msgBadge = document.createElement("span");
     msgBadge.className = "nav-badge";
     msgBadge.hidden = true;

@@ -153,3 +153,5 @@
 .note-dot { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: transparent; }
 .note-item.unread .note-dot { background: var(--green); }
 .note-item small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; }
+
+.nav a[aria-label="Messages"], .nav a[aria-label="Notifications"] { font-size: 18px; line-height: 1; position: relative; }
